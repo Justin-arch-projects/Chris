@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rug Cleaning Quote</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f5f0e8;
+      --card: #ffffff;
+      --accent: #2d5a3d;
+      --accent-light: #e8f0eb;
+      --text: #1a1a1a;
+      --muted: #6b6b6b;
+      --border: #d8d0c4;
+      --danger: #c0392b;
+      --radius: 14px;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 2rem 1rem 4rem;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+    }
+
+    header h1 {
+      font-family: 'DM Serif Display', serif;
+      font-size: clamp(2rem, 6vw, 3rem);
+      color: var(--accent);
+      line-height: 1.1;
+      margin-bottom: 0.5rem;
+    }
+
+    header p {
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      padding: 1.75rem;
+      max-width: 520px;
+      margin: 0 auto 1.25rem;
+    }
+
+    .section-label {
+      font-size: 0.75rem;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 1rem;
+    }
+
+    .dims {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 1.5rem;
+    }
+
+    .field label {
+      display: block;
+      font-size: 0.82rem;
+      color: var(--muted);
+      margin-bottom: 5px;
+    }
+
+    input[type="number"], select {
+      width: 100%;
+      padding: 0.65rem 0.9rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 1rem;
+      color: var(--text);
+      background: #faf8f5;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    input[type="number"]:focus, select:focus {
+      border-color: var(--accent);
+    }
+
+    .rug-type {
+      margin-bottom: 1.5rem;
+    }
+
+    .radio-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 1.5rem;
+    }
+
+    .radio-option, .check-option {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 0.75rem 1rem;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+
+    .radio-option:hover, .check-option:hover {
+      border-color: var(--accent);
+      background: var(--accent-light);
+    }
+
+    .radio-option input, .check-option input {
+      margin-top: 2px;
+      accent-color: var(--accent);
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+    }
+
+    .radio-option .opt-text, .check-option .opt-text {
+      flex: 1;
+    }
+
+    .opt-title {
+      font-size: 0.95rem;
+      font-weight: 500;
+    }
+
+    .opt-desc {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .addons {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .summary-card {
+      background: var(--accent);
+      color: #fff;
+      border-radius: var(--radius);
+      padding: 1.75rem;
+      max-width: 520px;
+      margin: 0 auto;
+    }
+
+    .summary-card .section-label {
+      color: rgba(255,255,255,0.65);
+    }
+
+    .line-items {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 1.25rem;
+    }
+
+    .line {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.88rem;
+      color: rgba(255,255,255,0.8);
+    }
+
+    .line.discount {
+      color: #a8dbb5;
+    }
+
+    .divider {
+      border: none;
+      border-top: 1px solid rgba(255,255,255,0.25);
+      margin: 1rem 0;
+    }
+
+    .total-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+
+    .total-label {
+      font-size: 1rem;
+      font-weight: 500;
+    }
+
+    .total-amount {
+      font-family: 'DM Serif Display', serif;
+      font-size: 2.5rem;
+      line-height: 1;
+    }
+
+    .sqft-note {
+      font-size: 0.78rem;
+      color: rgba(255,255,255,0.5);
+      margin-top: 0.5rem;
+      text-align: right;
+    }
+
+    .empty-state {
+      font-size: 0.88rem;
+      color: rgba(255,255,255,0.55);
+      font-style: italic;
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 2rem;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Rug Cleaning Quote</h1>
+    <p>Get an instant estimate for your rug</p>
+  </header>
+
+  <div class="card">
+    <p class="section-label">Rug dimensions</p>
+    <div class="dims">
+      <div class="field">
+        <label>Length (ft)</label>
+        <input type="number" id="length" min="0" step="0.1" placeholder="e.g. 8" />
+      </div>
+      <div class="field">
+        <label>Width (ft)</label>
+        <input type="number" id="width" min="0" step="0.1" placeholder="e.g. 10" />
+      </div>
+    </div>
+
+    <p class="section-label">Rug type</p>
+    <div class="rug-type">
+      <select id="rugType">
+        <option value="6.95">Wool — $6.95 / sq ft</option>
+      </select>
+    </div>
+
+    <p class="section-label">Delivery</p>
+    <div class="radio-group">
+      <label class="radio-option">
+        <input type="radio" name="delivery" value="full" checked />
+        <div class="opt-text">
+          <div class="opt-title">Pickup &amp; delivery</div>
+          <div class="opt-desc">We come to you — included in price</div>
+        </div>
+      </label>
+      <label class="radio-option">
+        <input type="radio" name="delivery" value="dropoff" />
+        <div class="opt-text">
+          <div class="opt-title">I'll drop it off</div>
+          <div class="opt-desc">Save 15% when you bring your rug to us</div>
+        </div>
+      </label>
+    </div>
+  </div>
+
+  <div class="card">
+    <p class="section-label">Condition add-ons</p>
+    <div class="addons">
+      <label class="check-option">
+        <input type="checkbox" id="heavyStains" />
+        <div class="opt-text">
+          <div class="opt-title">Heavy stains</div>
+          <div class="opt-desc">+$65.00 flat fee</div>
+        </div>
+      </label>
+      <label class="check-option">
+        <input type="checkbox" id="cumStains" />
+        <div class="opt-text">
+          <div class="opt-title">Bodily fluid stains</div>
+          <div class="opt-desc">+$65.00 flat fee</div>
+        </div>
+      </label>
+      <label class="check-option">
+        <input type="checkbox" id="cumSmell" />
+        <div class="opt-text">
+          <div class="opt-title">Biological odor removal</div>
+          <div class="opt-desc">+$100.00 flat fee</div>
+        </div>
+      </label>
+      <label class="check-option">
+        <input type="checkbox" id="petOdor" />
+        <div class="opt-text">
+          <div class="opt-title">Pet odor treatment</div>
+          <div class="opt-desc">+$2.50 per sq ft</div>
+        </div>
+      </label>
+    </div>
+  </div>
+
+  <div class="summary-card">
+    <p class="section-label">Your estimate</p>
+    <div class="line-items" id="lineItems">
+      <span class="empty-state">Enter your rug dimensions above to see a quote.</span>
+    </div>
+    <hr class="divider" />
+    <div class="total-row">
+      <span class="total-label">Total estimate</span>
+      <span class="total-amount" id="totalAmount">$0.00</span>
+    </div>
+    <p class="sqft-note" id="sqftNote"></p>
+  </div>
+
+  <footer>Prices in USD &nbsp;·&nbsp; All cleaning includes standard wash &amp; dry</footer>
+
+  <script>
+    function calc() {
+      const L = parseFloat(document.getElementById('length').value) || 0;
+      const W = parseFloat(document.getElementById('width').value) || 0;
+      const sqft = L * W;
+      const rate = parseFloat(document.getElementById('rugType').value);
+      const dropoff = document.querySelector('input[name="delivery"]:checked').value === 'dropoff';
+
+      const heavy = document.getElementById('heavyStains').checked;
+      const cum = document.getElementById('cumStains').checked;
+      const smell = document.getElementById('cumSmell').checked;
+      const pet = document.getElementById('petOdor').checked;
+
+      const base = sqft * rate;
+      const discount = dropoff ? base * 0.15 : 0;
+      const petFee = pet ? sqft * 2.50 : 0;
+      const addons = (heavy ? 65 : 0) + (cum ? 65 : 0) + (smell ? 100 : 0) + petFee;
+      const total = base - discount + addons;
+
+      const container = document.getElementById('lineItems');
+      const totalEl = document.getElementById('totalAmount');
+      const noteEl = document.getElementById('sqftNote');
+
+      if (sqft <= 0) {
+        container.innerHTML = '<span class="empty-state">Enter your rug dimensions above to see a quote.</span>';
+        totalEl.textContent = '$0.00';
+        noteEl.textContent = '';
+        return;
+      }
+
+      const lines = [];
+      lines.push(['Base cleaning (' + sqft.toFixed(1) + ' sq ft × $' + rate.toFixed(2) + ')', '$' + base.toFixed(2), false]);
+      if (dropoff) lines.push(['Drop-off discount (15%)', '−$' + discount.toFixed(2), true]);
+      if (heavy) lines.push(['Heavy stains', '+$65.00', false]);
+      if (cum) lines.push(['Bodily fluid stains', '+$65.00', false]);
+      if (smell) lines.push(['Biological odor removal', '+$100.00', false]);
+      if (pet) lines.push(['Pet odor (' + sqft.toFixed(1) + ' sq ft × $2.50)', '+$' + petFee.toFixed(2), false]);
+
+      container.innerHTML = lines.map(([label, val, isDiscount]) =>
+        `<div class="line${isDiscount ? ' discount' : ''}"><span>${label}</span><span>${val}</span></div>`
+      ).join('');
+
+      totalEl.textContent = '$' + total.toFixed(2);
+      noteEl.textContent = 'Based on ' + sqft.toFixed(1) + ' sq ft';
+    }
+
+    document.querySelectorAll('input, select').forEach(el => el.addEventListener('input', calc));
+    calc();
+  </script>
+</body>
+</html>
