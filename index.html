@@ -260,6 +260,11 @@ body.locked .top,body.locked main,body.locked #processView{visibility:hidden}
 .logo{display:block;height:68px;width:auto}
 body.tv .logo{height:76px}
 @media (max-width:600px){.logo{height:40px}}
+.board .card,.board .ocard{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:pan-x pan-y}
+.drag-ghost{position:fixed;z-index:60;pointer-events:none;box-shadow:0 10px 28px rgba(10,14,30,.28);transform:rotate(1.5deg);opacity:.95}
+.drag-src{opacity:.35}
+body.dragging,body.dragging *{cursor:grabbing!important}
+.col.drop-on{box-shadow:inset 0 0 0 3px var(--accent);background:var(--accent-soft)}
 </style>
 <header class="top">
   <div class="gut">
@@ -704,11 +709,11 @@ function renderBoard(){
     if(s.order){const wos=[...new Set(cards.filter(r=>r.stage===s.k).map(r=>r.wo))].sort((a,b)=>(orderOf(a)[0].dueAt||0)-(orderOf(b)[0].dueAt||0));count=wos.length;body=wos.map(w=>orderCardHTML(w,s.k)).join('');sub=`${count} order${count===1?'':'s'}`;}
     else{const list=cards.filter(r=>r.stage===s.k).sort((a,b)=>(b.activeBy?1:0)-(a.activeBy?1:0)||a.dueAt-b.dueAt);count=list.length;const working=list.filter(r=>r.activeBy).length;body=list.map(cardHTML).join('');if(count)sub=`${working} ${s.proc?'in':'working'} · ${count-working} waiting`;}
     const lim=wipLim(s.k);const wst=lim?(count>lim?'late':count===lim?'soon':'ok'):'';
-    return `<section class="col ${wst==='late'?'over':''}" aria-label="${esc(s.n)}"><div class="col-h"><div class="t"><b>${s.n}</b><span class="ct">${count}</span></div>${lim?`<span class="pill ${wst}" style="align-self:flex-start">WIP ${count} / ${lim}${wst==='late'?' · over':wst==='soon'?' · full':''}</span>`:''}<small>${s.d}${s.only?` · ${s.only} only`:''}</small><span class="gate">${s.g}${s.g&&sub?' · ':''}${sub}</span></div>${body||'<div class="empty-col">Nothing here</div>'}</section>`;}).join('');
+    return `<section class="col ${wst==='late'?'over':''}" data-stage="${s.k}" aria-label="${esc(s.n)}"><div class="col-h"><div class="t"><b>${s.n}</b><span class="ct">${count}</span></div>${lim?`<span class="pill ${wst}" style="align-self:flex-start">WIP ${count} / ${lim}${wst==='late'?' · over':wst==='soon'?' · full':''}</span>`:''}<small>${s.d}${s.only?` · ${s.only} only`:''}</small><span class="gate">${s.g}${s.g&&sub?' · ':''}${sub}</span></div>${body||'<div class="empty-col">Nothing here</div>'}</section>`;}).join('');
   return `<div class="stack">
     <div class="stack" style="gap:8px"><h3>On the floor now</h3>${crewHTML()}</div>
     <div class="board-tools"><input type="search" id="q" placeholder="Find tag, customer or work order" value="${esc(S.q)}" aria-label="Find tag, customer or work order"><button class="btn primary" data-go="intake">+ New work order</button>
-      <div class="legend"><span><span class="pill ok">Day 3 of 10</span> on track</span><span><span class="pill soon">Day 9 of 10</span> due within 2 days</span><span><span class="pill late">! Overdue</span> past 10 business days</span><span><span class="pill stuck">Stuck</span> waiting over 24h</span><span>Dashed cards are pads and work orders</span></div></div>
+      <div class="legend"><span><span class="pill ok">Day 3 of 10</span> on track</span><span><span class="pill soon">Day 9 of 10</span> due within 2 days</span><span><span class="pill late">! Overdue</span> past 10 business days</span><span><span class="pill stuck">Stuck</span> waiting over 24h</span><span>Dashed cards are pads and work orders</span><span><b>Drag a card</b> to move it (on a phone, press and hold first)</span></div></div>
     ${!S.rugs.length?`<div class="panel stack" style="gap:8px"><h2>No rugs on the board yet</h2><p class="muted" style="margin:0">Start with <b>New work order</b>. Each rug then moves column to column as people tap Start and Finish. To try it first, load sample rugs under <b>Team &amp; setup</b>.</p></div>`:''}
     <div class="board" style="--ncol:${STAGES.length}">${cols}</div></div>`;
 }
@@ -940,6 +945,7 @@ function renderOrderDrawer(d,wo){
 
 /* ---------- render ---------- */
 function render(){
+  if(S.dragging){S.dirty=true;return;}
   renderHeader();const v=$('#view');const pv=S.view==='process';v.hidden=pv;$('#processView').hidden=!pv;if(pv)return;
   if(S.view==='intake'){if(!$('#fIntake')){v.innerHTML=renderIntake();wireIntake();}return;}
   const ae=document.activeElement;const keep=ae&&ae.id;const pos=ae&&ae.selectionStart;const tName=$('#tName')?$('#tName').value:'';
@@ -947,6 +953,70 @@ function render(){
   if(keep&&['q','sq','tName'].includes(keep)){const el=$('#'+keep);if(el){el.focus();try{el.setSelectionRange(pos,pos);}catch(e){}}}
 }
 function go(view){S.view=view;ls('cf_view',view);$('#view').innerHTML='';render();window.scrollTo(0,0);}
+
+/* ---------- drag and drop between columns ---------- */
+async function addPadFor(r,now){
+  if(!r.pad||S.rugs.some(c=>c.kind==='pad'&&c.rugId===r.id))return;
+  try{await S.db.collection('rugs').add({kind:'pad',rugId:r.id,wo:r.wo,tag:r.tag,customer:r.customer,receivedAt:r.receivedAt,dueAt:r.dueAt,source:r.source,ret:r.ret,
+    w_ft:r.w_ft,w_in:r.w_in,l_ft:r.l_ft,l_in:r.l_in,sqft:r.sqft,notes:r.padSize?`Cut to ${r.padSize}`:'Cut to dry-room measurement',stage:'padcut',queuedAt:now,activeBy:null,activeStartAt:null,assignedTo:null,history:[],demo:!!r.demo,createdAt:now,updatedAt:now});
+    toast(`Pad for ${r.tag} added to Pad cutting`);}catch(e){fail(e);}
+}
+async function actDrop(id,k){
+  const r=byId(id);if(!r||r.stage===k||!SBY[k])return;
+  if(r.kind==='pad'&&!['padcut','held','complete','notified'].includes(k)){toast('Pad cards move between Pad cutting and the order columns.');return;}
+  if(r.kind!=='pad'&&k==='padcut'){toast('Rugs don\'t go to Pad cutting. Their pad gets its own card after dry-room checkout.');return;}
+  const now=Date.now();const p={stage:k,queuedAt:now,activeBy:null,activeStartAt:null,pausedAt:null,pausedMs:0,assignedTo:null,sub:{}};
+  let note='';
+  if(r.activeBy){const pausedMs=(r.pausedMs||0)+(r.pausedAt?now-r.pausedAt:0);const sub=closeSubs(r,now);
+    const entry={stage:r.stage,by:r.activeBy,queuedAt:r.queuedAt||r.receivedAt,startAt:r.activeStartAt,endAt:now,pausedMs,sqft:r.sqft||0};
+    const subMs={};Object.keys(sub).forEach(x=>{if(sub[x].ms)subMs[x]=sub[x].ms;});if(Object.keys(subMs).length)entry.sub=subMs;
+    if(r.stage==='repair')entry.via=r.repairVia||'in-house';
+    p.history=[...(r.history||[]),entry];note=` · ${r.activeBy}'s ${SBY[r.stage].n.toLowerCase()} time saved`;}
+  if(SBY[k].order){p.doneAt=r.doneAt||now;if(k!=='held')p.workCompleteAt=r.workCompleteAt||now;if(k==='notified')p.notifiedAt=r.notifiedAt||now;}
+  else{p.doneAt=null;p.workCompleteAt=null;p.notifiedAt=null;}
+  const lim=wipLim(k),cnt=colCount(k);
+  const ok=await writeCard(id,p,`${label(r)} → ${SBY[k].n}${note}`+(lim&&cnt>=lim?` · ${SBY[k].n} is over its WIP limit (${cnt+1}/${lim})`:''));
+  if(!ok)return;
+  const past=LINEAR.indexOf(r.stage)>=0&&!LINEAR.includes(k)&&k!=='padcut';
+  if(r.kind!=='pad'&&(r.stage==='checkout'||past))await addPadFor(r,now);
+  if(k==='held')setTimeout(()=>checkOrder(r.wo),400);
+}
+function orderDrop(wo,k){
+  const cards=orderOf(wo);const from=cards.every(c=>c.stage==='complete')?'complete':cards.every(c=>c.stage==='notified')?'notified':'held';
+  if(from==='complete'&&k==='notified'){actInvoice(wo,S.me);return;}
+  if(from===k)return;
+  toast('Work orders move forward from Order check & invoice to Customer called. Open the order for other changes.');
+}
+const DG={};
+function dgStart(x,y){const el=DG.el;const r=el.getBoundingClientRect();S.dragging=true;DG.active=true;
+  const g=el.cloneNode(true);g.classList.add('drag-ghost');g.style.width=r.width+'px';g.style.left=(x-(DG.ox=x-r.left))+'px';g.style.top=(y-(DG.oy=y-r.top))+'px';
+  document.body.appendChild(g);DG.ghost=g;el.classList.add('drag-src');document.body.classList.add('dragging');try{navigator.vibrate&&navigator.vibrate(15);}catch(e){}}
+function dgColAt(x,y){const el=document.elementFromPoint(x,y);return el&&el.closest('section.col[data-stage]');}
+function dgMove(x,y){if(!DG.active)return;DG.ghost.style.left=(x-DG.ox)+'px';DG.ghost.style.top=(y-DG.oy)+'px';
+  const col=dgColAt(x,y);if(DG.hover!==col){if(DG.hover)DG.hover.classList.remove('drop-on');if(col)col.classList.add('drop-on');DG.hover=col;}
+  const b=document.querySelector('.board');if(b){const br=b.getBoundingClientRect();if(x<br.left+48)b.scrollLeft-=14;else if(x>br.right-48)b.scrollLeft+=14;}
+  if(y<90)window.scrollBy(0,-12);else if(y>window.innerHeight-60)window.scrollBy(0,12);}
+function dgEnd(x,y,cancel){clearTimeout(DG.timer);
+  if(DG.active){const col=cancel?null:dgColAt(x,y);if(DG.hover)DG.hover.classList.remove('drop-on');DG.ghost&&DG.ghost.remove();DG.el&&DG.el.classList.remove('drag-src');document.body.classList.remove('dragging');
+    S.dragging=false;S.justDragged=true;setTimeout(()=>{S.justDragged=false;},400);
+    if(col){const k=col.dataset.stage;if(DG.wo)orderDrop(DG.wo,k);else actDrop(DG.id,k);}
+    if(S.dirty){S.dirty=false;render();}}
+  for(const k of Object.keys(DG))delete DG[k];}
+function dgCan(t){if(S.view!=='board'||S.canWrite===false||!S.db)return null;const c=t.closest&&t.closest('.board .card[data-open], .board .ocard[data-order]');return c&&!S.pending.has(c.dataset.open)?c:null;}
+document.addEventListener('mousedown',e=>{if(e.button!==0)return;const c=dgCan(e.target);if(!c)return;Object.assign(DG,{el:c,id:c.dataset.open,wo:c.dataset.order,x:e.clientX,y:e.clientY,mouse:true});});
+document.addEventListener('mousemove',e=>{if(!DG.mouse)return;if(!DG.active){if(Math.hypot(e.clientX-DG.x,e.clientY-DG.y)>6)dgStart(e.clientX,e.clientY);else return;}e.preventDefault();dgMove(e.clientX,e.clientY);});
+document.addEventListener('mouseup',e=>{if(DG.mouse)dgEnd(e.clientX,e.clientY,false);});
+document.addEventListener('touchstart',e=>{if(e.touches.length!==1)return;const c=dgCan(e.target);if(!c)return;const t=e.touches[0];
+  Object.assign(DG,{el:c,id:c.dataset.open,wo:c.dataset.order,x:t.clientX,y:t.clientY,lx:t.clientX,ly:t.clientY,touch:true});
+  DG.timer=setTimeout(()=>{if(DG.touch&&!DG.active)dgStart(DG.lx,DG.ly);},300);},{passive:true});
+document.addEventListener('touchmove',e=>{if(!DG.touch)return;const t=e.touches[0];DG.lx=t.clientX;DG.ly=t.clientY;
+  if(!DG.active){if(Math.hypot(t.clientX-DG.x,t.clientY-DG.y)>10){clearTimeout(DG.timer);for(const k of Object.keys(DG))delete DG[k];}return;}
+  e.preventDefault();dgMove(t.clientX,t.clientY);},{passive:false});
+document.addEventListener('touchend',e=>{if(!DG.touch)return;if(DG.active)e.preventDefault();dgEnd(DG.lx,DG.ly,false);},{passive:false});
+document.addEventListener('touchcancel',()=>{if(DG.touch)dgEnd(0,0,true);});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&DG.active)dgEnd(0,0,true);});
+document.addEventListener('click',e=>{if(S.justDragged){e.stopPropagation();e.preventDefault();S.justDragged=false;}},true);
+document.addEventListener('contextmenu',e=>{if(DG.touch||DG.active)e.preventDefault();});
 
 /* ---------- events ---------- */
 document.addEventListener('click',e=>{
