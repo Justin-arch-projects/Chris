@@ -4,5 +4,5 @@
 // Never paste the service_role / secret key here.
 window.CRISTOMAR_SUPABASE = {
   url: "https://sucothmkrrrgllcgjmth.supabase.co",
-  key: "PASTE_ANON_OR_PUBLISHABLE_KEY_HERE"
+  key: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN1Y290aG1rcnJyZ2xsY2dqbXRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM0MzEzODAsImV4cCI6MjEwOTAwNzM4MH0.jUzJLGBf_2TR9tZyQ9UcRHtF8YYz2C8qco8mtoogqu8"
 };
